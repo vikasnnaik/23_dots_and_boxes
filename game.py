@@ -1,14 +1,54 @@
 from board import Board
-from rules import valid_move, completed_boxes
+from rules import completed_boxes, move_error
 
 class DotsAndBoxes:
+    BOARD_SIZES = {
+        "1": ("Small", 2),
+        "2": ("Medium", 3),
+        "3": ("Large", 4),
+    }
+
     def __init__(self):
         self.board = Board()
         self.current = 0
         self.scores = [0, 0]
 
+    def _select_board(self):
+        print("Choose a board size:")
+        for choice, (name, boxes) in self.BOARD_SIZES.items():
+            print(f"{choice}. {name} ({boxes}x{boxes} boxes)")
+
+        while True:
+            choice = input("Board size (1-3): ").strip()
+            selected = self.BOARD_SIZES.get(choice)
+            if selected is not None:
+                _, boxes = selected
+                return Board(boxes, boxes)
+            print("Invalid board size. Please choose 1, 2, or 3.")
+
+    def play_move(self, orientation, row, col):
+        error = move_error(self.board, orientation, row, col)
+        if error:
+            print(error)
+            return False
+
+        before = set(self.board.completed)
+        if not self.board.add_line(orientation, row, col):
+            return False
+        newly_completed = completed_boxes(self.board, before)
+
+        if newly_completed:
+            self.scores[self.current] += newly_completed
+            print(f"Player {self.current + 1} completed {newly_completed} box(es) and plays again.")
+        else:
+            self.current = 1 - self.current
+        return True
+
     def run(self):
         print("Dots and Boxes")
+        self.board = self._select_board()
+        self.current = 0
+        self.scores = [0, 0]
         print("Enter moves as H row col or V row col.")
         print("Rows and columns start at 0.")
         print("Example: H 0 1")
@@ -23,24 +63,13 @@ class DotsAndBoxes:
                 continue
 
             orientation, row, col = parts
-            if not row.isdigit() or not col.isdigit():
-                print("Row and column must be numbers.")
+            try:
+                row, col = int(row), int(col)
+            except ValueError:
+                print("Row and column must be valid integers.")
                 continue
 
-            row, col = int(row), int(col)
-            if not valid_move(self.board, orientation, row, col):
-                print("Invalid or already-used move.")
-                continue
-
-            before = set(self.board.completed)
-            self.board.add_line(orientation, row, col)
-            newly_completed = completed_boxes(self.board, before)
-
-            if newly_completed:
-                self.scores[self.current] += newly_completed
-                print(f"Player {self.current + 1} completed {newly_completed} box(es) and plays again.")
-            else:
-                self.current = 1 - self.current
+            self.play_move(orientation, row, col)
 
         self.board.display(self.scores, self.current)
         print("Game over!")

@@ -1,3 +1,6 @@
+from rules import move_error
+
+
 class Board:
     def __init__(self, rows=2, cols=2):
         self.rows = rows
@@ -7,11 +10,17 @@ class Board:
         self.completed = set()
 
     def add_line(self, orientation, row, col):
+        error = move_error(self, orientation, row, col)
+        if error:
+            print(error)
+            return False
+
         if orientation == "H":
             self.horizontal[row][col] = True
         else:
             self.vertical[row][col] = True
         self._update_completed()
+        return True
 
     def _update_completed(self):
         for r in range(self.rows):
